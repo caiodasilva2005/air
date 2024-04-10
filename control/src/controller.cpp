@@ -6,6 +6,7 @@
 
 #include <driver/device.hpp>
 #include <driver/pinmap.hpp>
+#include <shared/utils.hpp>
 
 controller::controller(uint8_t intersect_size, tdma::scheme div)
 	: rf_module(std::make_shared<drf7020d20>(
@@ -15,6 +16,11 @@ controller::controller(uint8_t intersect_size, tdma::scheme div)
 	workers.reserve(intersect_size);
 	for (uint32_t i = 0; i < intersect_size; i++) {
 		auto tdma_ptr = std::make_shared<tdma>(rf_module, i, div);
+		rf_module->enable();
+		if (!rf_module->configure(FREQ_LIVE, drf7020d20::DR9600, 9,
+			drf7020d20::DR9600, drf7020d20::NONE)) {
+			throw std::runtime_error("Failed RF Configure");
+		}
 		message_worker worker(tdma_ptr, active);
 		auto executor = [&](uint8_t curr_pos, uint8_t requested_pos,
 							std::string &car_id, message_worker &worker) {
